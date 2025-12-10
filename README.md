@@ -10,10 +10,14 @@ Arch linux
 
 ### Установка   
 Скачать репозиторий через   
-```git clone https://github.com/AetherDeS/zorgy.git && cd zorgy```,
+```
+git clone https://github.com/AetherDeS/zorgy.git && cd zorgy
+``` 
 скрипт запустится сразу после установки   
 
 вручную можно запустить с помощью   
-`python ./main.py`
+```
+python ./main.py
+```
 
 
