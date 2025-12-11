@@ -1,74 +1,71 @@
-import click
-
-
-@click.command()
-@click.option(
-    "--directories",
-    "-d",
-    default="/home",
-    show_default="True",
-    help="Available directories /home, /etc, /var, /srv, /opt",
-)
-@click.option(
-    "--path",
-    default="/var/zorgy/backups/",
-    help="Directory to save backups, by default=/var/zorgy/backups",
-)
-@click.option("--compress", is_flag=True, help="Архивировать резервную копию")
-def main():
-    click.echo("Some description of this util")
-
-
-if __name__ == "__main__":
-    main()
-
-
+#!/usr/bin/env python3
 """
-click.group()
+Утилита для создания резервных копий файлов и каталогов.
+Поддерживает сжатие в формат .tar.gz.
+"""
+
+import os
+import shutil
+import click
+from datetime import datetime
+
+
+@click.group()
+@click.version_option("1.0.0")
 def cli():
     pass
 
 
-@cli.command('backup')
-@click.option('--source', '-s', required=True, help='Источник (каталог или файл)')
-@click.option('--destination', '-d', default=None, help='Каталог назначения')
-@click.option('--compress', is_flag=True, help='Архивировать резервную копию')
+@cli.command("backup")
+@click.option(
+    "--source",
+    "-s",
+    required=True,
+    type=click.Path(exists=True, file_okay=True, dir_okay=True, readable=True, resolve_path=True),
+    help="Исходный файл или каталог для резервного копирования.",
+)
+@click.option(
+    "--destination",
+    "-d",
+    type=click.Path(file_okay=False, writable=True, resolve_path=True),
+    default="/var/zorgy/backups",
+    show_default=True,
+    help="Каталог для сохранения резервных копий.",
+)
+@click.option(
+    "--compress",
+    is_flag=True,
+    help="Архивировать резервную копию в формат .tar.gz.",
+)
 def backup(source, destination, compress):
-    "
-    Выполняет резервное копирование каталога или файла
-    "
-    if not os.path.exists(source):
-        raise FileNotFoundError(f'Исходный путь "{source}" не существует.')
+    """Выполняет резервное копирование указанного файла или каталога."""
+    # Создаём директорию назначения, если её нет
+    os.makedirs(destination, exist_ok=True)
 
-    # По умолчанию сохранить в родительской директории текущего рабочего каталога
-    if not destination:
-        parent_dir = os.getcwd() + '/backups'
-        if not os.path.exists(parent_dir):
-            os.makedirs(parent_dir)
-        destination = parent_dir
-
-    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    filename = f'{os.path.basename(source)}_{timestamp}'
-
+    # Формируем имя резервной копии с отметкой времени
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    basename = os.path.basename(source.rstrip(os.sep))  # убираем завершающий слэш для каталогов
+    filename = f"{basename}_{timestamp}"
 
     target_path = os.path.join(destination, filename)
 
     try:
         if compress:
-            print(f'Создаем архив {target_path}.tar.gz...')
-            shutil.make_archive(target_path, 'gztar', source)
+            click.echo(f"Создаём архив: {target_path}.tar.gz")
+            shutil.make_archive(target_path, "gztar", root_dir=os.path.dirname(source), base_dir=os.path.basename(source))
+            click.secho("Архивация успешно завершена.", fg="green")
         else:
-            print(f'Копируем {source} в {target_path}')
+            click.echo(f"Копируем '{source}' в '{target_path}'")
             if os.path.isdir(source):
                 shutil.copytree(source, target_path)
             else:
-                shutil.copy(source, target_path)
+                shutil.copy2(source, target_path)
+            click.secho("Резервное копирование успешно завершено.", fg="green")
 
-        print("Резервное копирование успешно завершилось.")
     except Exception as e:
-        print(f"Произошла ошибка: {e}")
+        click.secho(f"Ошибка: {e}", fg="red", err=True)
+        raise click.Abort()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     cli()
-"""
